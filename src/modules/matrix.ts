@@ -900,8 +900,10 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   root.innerHTML = `<div style="padding:16px;font-size:14px;">正在加载矩阵数据...</div>`;
   const rows = await buildMatrixPageRows();
   const state =
-    ((win as any).__lmsMatrixPageState as { q: string; status: string } | undefined) ||
-    { q: "", status: "all" };
+    ((win as any).__lmsMatrixPageState as
+      | { q: string; status: string; sortKey: string; sortDir: "asc" | "desc" }
+      | undefined) ||
+    { q: "", status: "all", sortKey: "updated", sortDir: "desc" };
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
     <div style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
@@ -941,11 +943,31 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       return;
     }
     const filtered = filterMatrixRows(rows, state.q, state.status);
+    const sorted = sortMatrixRows(filtered, state.sortKey, state.sortDir);
     if (statsWrap) {
-      statsWrap.innerHTML = renderMatrixStatsHTML(filtered);
+      statsWrap.innerHTML = renderMatrixStatsHTML(sorted);
     }
     bindHeatmapTooltip(doc);
-    tableWrap.innerHTML = renderMatrixTableHTML(filtered);
+    tableWrap.innerHTML = renderMatrixTableHTML(sorted, state.sortKey, state.sortDir);
+
+    const sortBtns = tableWrap.querySelectorAll<HTMLButtonElement>(
+      "[data-sort-key]",
+    );
+    sortBtns.forEach((btn: HTMLButtonElement) => {
+      btn.onclick = () => {
+        const key = String(btn.dataset.sortKey || "");
+        if (!key) {
+          return;
+        }
+        if (state.sortKey === key) {
+          state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+        } else {
+          state.sortKey = key;
+          state.sortDir = "asc";
+        }
+        renderTable();
+      };
+    });
     const jumpBtns =
       tableWrap.querySelectorAll<HTMLButtonElement>("[data-jump-item-id]");
     jumpBtns.forEach((btn: HTMLButtonElement) => {
@@ -977,6 +999,84 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     void renderMatrixPage(win);
   });
   renderTable();
+}
+
+function sortMatrixRows(
+  rows: MatrixPageRow[],
+  sortKey: string,
+  sortDir: "asc" | "desc",
+): MatrixPageRow[] {
+  const dir = sortDir === "asc" ? 1 : -1;
+  const statusWeight = (s: string) =>
+    s === "done" ? 3 : s === "reading" ? 2 : s === "unread" ? 1 : 0;
+  const parseYear = (y: string) => {
+    const n = Number(String(y || "").trim());
+    return Number.isFinite(n) ? n : -1;
+  };
+  const parseISODate = (d: string) => {
+    const iso = String(d || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      return -1;
+    }
+    const t = Date.parse(`${iso}T00:00:00Z`);
+    return Number.isFinite(t) ? t : -1;
+  };
+  const getAIField = (key: string) =>
+    key.startsWith("ai__") ? fromSafeAIKey(key.slice(4)) : "";
+
+  const comparator = (a: MatrixPageRow, b: MatrixPageRow) => {
+    if (sortKey === "title") {
+      return dir * String(a.title || "").localeCompare(String(b.title || ""), "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    }
+    if (sortKey === "author") {
+      return dir * String(a.author || "").localeCompare(String(b.author || ""), "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    }
+    if (sortKey === "journal") {
+      return dir * String(a.journal || "").localeCompare(String(b.journal || ""), "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    }
+    if (sortKey === "year") {
+      return dir * (parseYear(a.year) - parseYear(b.year));
+    }
+    if (sortKey === "status") {
+      return dir * (statusWeight(a.status) - statusWeight(b.status));
+    }
+    if (sortKey === "tags") {
+      return dir * String(a.tags || "").localeCompare(String(b.tags || ""), "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    }
+    if (sortKey === "updated") {
+      return dir * (parseISODate(a.updated) - parseISODate(b.updated));
+    }
+    const aiField = getAIField(sortKey);
+    if (aiField) {
+      return dir * String(a.ai[aiField] || "").localeCompare(String(b.ai[aiField] || ""), "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    }
+    return dir * (a.itemID - b.itemID);
+  };
+
+  return [...rows].sort((a, b) => {
+    const v = comparator(a, b);
+    return v !== 0 ? v : a.itemID - b.itemID;
+  });
+}
+
+function fromSafeAIKey(safe: string): MatrixAIKey | "" {
+  const hit = AI_FIELDS.find((f) => toSafeKey(f) === safe);
+  return hit || "";
 }
 
 async function buildMatrixPageRows(): Promise<MatrixPageRow[]> {
@@ -1032,16 +1132,20 @@ function filterMatrixRows(rows: MatrixPageRow[], q: string, status: string) {
   });
 }
 
-function renderMatrixTableHTML(rows: MatrixPageRow[]) {
-  const headers = [
-    "标题",
-    "作者",
-    "期刊",
-    "年份",
-    "状态",
-    "标签",
-    "更新日期",
-    ...AI_FIELDS,
+function renderMatrixTableHTML(
+  rows: MatrixPageRow[],
+  sortKey: string,
+  sortDir: "asc" | "desc",
+) {
+  const headers: Array<{ key: string; label: string }> = [
+    { key: "title", label: "标题" },
+    { key: "author", label: "作者" },
+    { key: "journal", label: "期刊" },
+    { key: "year", label: "年份" },
+    { key: "status", label: "状态" },
+    { key: "tags", label: "标签" },
+    { key: "updated", label: "更新日期" },
+    ...AI_FIELDS.map((f) => ({ key: `ai__${toSafeKey(f)}`, label: f })),
   ];
   const statusCN = (s: string) =>
     s === "done" ? "已读" : s === "reading" ? "在读" : "未读";
@@ -1079,10 +1183,15 @@ function renderMatrixTableHTML(rows: MatrixPageRow[]) {
       <thead>
         <tr>
           ${headers
-            .map(
-              (h) =>
-                `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${h}</th>`,
-            )
+            .map(({ key, label }) => {
+              const active = key === sortKey;
+              const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+              return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
+                <button data-sort-key="${escapeHTML(key)}" style="all:unset;cursor:pointer;display:inline;">
+                  ${escapeHTML(label)}${arrow}
+                </button>
+              </th>`;
+            })
             .join("")}
         </tr>
       </thead>
