@@ -106,6 +106,15 @@ const MATRIX_NAV_BUTTON_ID = "zotero-toolbarbutton-lms-matrix";
 const MATRIX_PAGE_ROOT_ID = "lms-matrix-page-root";
 const matrixTabIDs = new WeakMap<Window, string>();
 
+// Auto-rebuild can be triggered by Zotero sync/bulk edits.
+// Use a debounced, de-duplicated queue to avoid UI stutters.
+const AUTO_REBUILD_DEBOUNCE_MS = 1500;
+const AUTO_REBUILD_BATCH_SIZE = 25;
+const AUTO_REBUILD_MAX_PER_FLUSH = 300;
+const pendingAutoRebuildIDs = new Set<number>();
+let autoRebuildTimer: Promise<void> | null = null;
+let autoRebuildRunning = false;
+
 export class MatrixFeature {
   static async startup() {
     await this.registerColumns();
@@ -119,6 +128,9 @@ export class MatrixFeature {
       Zotero.Notifier.unregisterObserver(notifierID);
       notifierID = "";
     }
+    pendingAutoRebuildIDs.clear();
+    autoRebuildTimer = null;
+    autoRebuildRunning = false;
     Zotero.getMainWindows().forEach((win) => this.onMainWindowUnload(win));
     for (const dataKey of registeredColumnKeys) {
       const unregisterColumns = (
@@ -472,13 +484,104 @@ export class MatrixFeature {
         if (!targetRegularItems.length) {
           return;
         }
-        const dedupMap = new Map<number, Zotero.Item>();
-        targetRegularItems.forEach((item) => dedupMap.set(item.id, item));
-        await rebuildForRegularItems([...dedupMap.values()]);
+
+        enqueueAutoRebuild(targetRegularItems);
       },
     };
 
     notifierID = Zotero.Notifier.registerObserver(callback, ["item"]);
+  }
+}
+
+function enqueueAutoRebuild(items: Zotero.Item[]) {
+  for (const item of items) {
+    if (item?.id) {
+      pendingAutoRebuildIDs.add(item.id);
+    }
+  }
+  scheduleAutoRebuildFlush();
+}
+
+function scheduleAutoRebuildFlush() {
+  if (autoRebuildTimer) {
+    return;
+  }
+  autoRebuildTimer = Zotero.Promise.delay(AUTO_REBUILD_DEBOUNCE_MS).then(
+    async () => {
+      autoRebuildTimer = null;
+      await flushAutoRebuildQueue();
+    },
+  );
+}
+
+async function flushAutoRebuildQueue() {
+  if (autoRebuildRunning) {
+    // Another flush is in progress; it will pick up new IDs.
+    return;
+  }
+  if (!addon?.data.alive) {
+    pendingAutoRebuildIDs.clear();
+    return;
+  }
+
+  autoRebuildRunning = true;
+  try {
+    let processedThisFlush = 0;
+
+    while (pendingAutoRebuildIDs.size > 0) {
+      if (!addon?.data.alive) {
+        pendingAutoRebuildIDs.clear();
+        return;
+      }
+      if (processedThisFlush >= AUTO_REBUILD_MAX_PER_FLUSH) {
+        // Avoid long blocking; continue later.
+        scheduleAutoRebuildFlush();
+        return;
+      }
+      if (isRebuilding) {
+        // A manual rebuild is running; postpone.
+        scheduleAutoRebuildFlush();
+        return;
+      }
+
+      const batchIDs: number[] = [];
+      for (const id of pendingAutoRebuildIDs) {
+        batchIDs.push(id);
+        if (batchIDs.length >= AUTO_REBUILD_BATCH_SIZE) {
+          break;
+        }
+      }
+      batchIDs.forEach((id) => pendingAutoRebuildIDs.delete(id));
+
+      const batchItems = await Zotero.Items.getAsync(batchIDs);
+      const regularItems = batchItems.filter(
+        (it): it is Zotero.Item => Boolean(it && it.isRegularItem()),
+      );
+
+      if (regularItems.length) {
+        isRebuilding = true;
+        try {
+          for (const item of regularItems) {
+            await rebuildSingleItemMatrix(item);
+          }
+        } finally {
+          isRebuilding = false;
+        }
+      }
+
+      processedThisFlush += batchIDs.length;
+
+      // Yield to keep UI responsive.
+      await Zotero.Promise.delay(0);
+    }
+  } catch (e) {
+    ztoolkit.log("flushAutoRebuildQueue error", e);
+  } finally {
+    autoRebuildRunning = false;
+    // If new items arrived while we were running, schedule another flush.
+    if (pendingAutoRebuildIDs.size > 0) {
+      scheduleAutoRebuildFlush();
+    }
   }
 }
 
