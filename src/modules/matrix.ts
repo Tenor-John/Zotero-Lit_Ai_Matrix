@@ -963,7 +963,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   };
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
       <div style="padding:12px 12px 8px 12px;border-bottom:1px solid #ddd;background:#f8fafc;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
           <div style="font-size:18px;font-weight:700;">智能文献矩阵</div>
