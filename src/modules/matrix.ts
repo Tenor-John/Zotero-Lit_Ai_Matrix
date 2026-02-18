@@ -963,14 +963,14 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   };
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
-    <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
+    <div xmlns="http://www.w3.org/1999/xhtml" xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
       <div style="padding:12px 12px 8px 12px;border-bottom:1px solid #ddd;background:#f8fafc;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
           <div style="font-size:18px;font-weight:700;">智能文献矩阵</div>
           <div style="font-size:12px;color:#64748b;">总文献: ${rows.length} | UI:${MATRIX_UI_VERSION}</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
-          <input id="lms-matrix-q" type="text" placeholder="搜索标题/期刊/AI字段" value="${escapeHTML(state.q)}" style="min-width:320px;flex:1 1 320px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;"/>
+          <xul:textbox id="lms-matrix-q" placeholder="搜索标题/期刊/AI字段" value="${escapeHTML(state.q)}" style="min-width:320px;flex:1 1 320px;"/>
           <button id="lms-matrix-export-csv" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">导出CSV</button>
           <button id="lms-matrix-export-md" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">导出Markdown</button>
           <button id="lms-matrix-refresh" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">刷新</button>
@@ -981,64 +981,74 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
           <div style="display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;align-items:end;">
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">阅读状态</div>
-              <select id="lms-matrix-status" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部状态</option>
-                <option value="done">已读</option>
-                <option value="reading">在读</option>
-                <option value="unread">未读</option>
-              </select>
+              <xul:menulist id="lms-matrix-status" style="width:100%;">
+                <xul:menupopup>
+                  <xul:menuitem label="全部状态" value="all" />
+                  <xul:menuitem label="已读" value="done" />
+                  <xul:menuitem label="在读" value="reading" />
+                  <xul:menuitem label="未读" value="unread" />
+                </xul:menupopup>
+              </xul:menulist>
             </div>
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">年份</div>
-              <select id="lms-matrix-year" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部年份</option>
-                ${years
-                  .map(
-                    (y) =>
-                      `<option value="${escapeHTML(y)}">${escapeHTML(y)}</option>`,
-                  )
-                  .join("")}
-              </select>
+              <xul:menulist id="lms-matrix-year" style="width:100%;">
+                <xul:menupopup>
+                  <xul:menuitem label="全部年份" value="all" />
+                  ${years
+                    .map(
+                      (y) =>
+                        `<xul:menuitem label="${escapeHTML(y)}" value="${escapeHTML(y)}" />`,
+                    )
+                    .join("")}
+                </xul:menupopup>
+              </xul:menulist>
             </div>
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">分类</div>
-              <select id="lms-matrix-journal" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部分类</option>
-                <option value="__empty__">未分类</option>
-                ${journals
-                  .filter((j) => j)
-                  .map(
-                    (j) =>
-                      `<option value="${escapeHTML(j)}">${escapeHTML(j)}</option>`,
-                  )
-                  .join("")}
-              </select>
+              <xul:menulist id="lms-matrix-journal" style="width:100%;">
+                <xul:menupopup>
+                  <xul:menuitem label="全部分类" value="all" />
+                  <xul:menuitem label="未分类" value="__empty__" />
+                  ${journals
+                    .filter((j) => j)
+                    .map(
+                      (j) =>
+                        `<xul:menuitem label="${escapeHTML(j)}" value="${escapeHTML(j)}" />`,
+                    )
+                    .join("")}
+                </xul:menupopup>
+              </xul:menulist>
             </div>
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">修改时间</div>
-              <select id="lms-matrix-updated-range" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">不限</option>
-                <option value="7d">近7天</option>
-                <option value="30d">近30天</option>
-                <option value="365d">近365天</option>
-              </select>
+              <xul:menulist id="lms-matrix-updated-range" style="width:100%;">
+                <xul:menupopup>
+                  <xul:menuitem label="不限" value="all" />
+                  <xul:menuitem label="近7天" value="7d" />
+                  <xul:menuitem label="近30天" value="30d" />
+                  <xul:menuitem label="近365天" value="365d" />
+                </xul:menupopup>
+              </xul:menulist>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:end;margin-top:12px;">
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">标签</div>
-              <input id="lms-matrix-tags" type="text" placeholder="全部标签" value="${escapeHTML(state.tags)}" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;"/>
+              <xul:textbox id="lms-matrix-tags" placeholder="全部标签" value="${escapeHTML(state.tags)}" style="width:100%;"/>
             </div>
             <div>
               <div style="font-size:12px;color:#475569;margin-bottom:6px;">排序方式</div>
-              <select id="lms-matrix-sort" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="added:desc">最新导入</option>
-                <option value="updated:desc">最新修改</option>
-                <option value="year:desc">年份（新→旧）</option>
-                <option value="year:asc">年份（旧→新）</option>
-                <option value="title:asc">标题（A→Z）</option>
-                <option value="title:desc">标题（Z→A）</option>
-              </select>
+              <xul:menulist id="lms-matrix-sort" style="width:100%;">
+                <xul:menupopup>
+                  <xul:menuitem label="最新导入" value="added:desc" />
+                  <xul:menuitem label="最新修改" value="updated:desc" />
+                  <xul:menuitem label="年份（新→旧）" value="year:desc" />
+                  <xul:menuitem label="年份（旧→新）" value="year:asc" />
+                  <xul:menuitem label="标题（A→Z）" value="title:asc" />
+                  <xul:menuitem label="标题（Z→A）" value="title:desc" />
+                </xul:menupopup>
+              </xul:menulist>
             </div>
           </div>
         </div>
@@ -1047,61 +1057,28 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       <div id="lms-matrix-table-wrap" style="flex:1 1 auto;overflow:auto;padding:8px 12px 12px 12px;background:#fff;"></div>
     </div>
   `;
-  const statusSel = doc.getElementById(
-    "lms-matrix-status",
-  ) as HTMLSelectElement | null;
-  if (statusSel) {
-    statusSel.value = state.status;
-  }
-  const yearSel = doc.getElementById(
-    "lms-matrix-year",
-  ) as HTMLSelectElement | null;
-  if (yearSel) {
-    yearSel.value = state.year;
-  }
-  const journalSel = doc.getElementById(
-    "lms-matrix-journal",
-  ) as HTMLSelectElement | null;
-  if (journalSel) {
-    journalSel.value = state.journal;
-  }
-  const updatedSel = doc.getElementById(
-    "lms-matrix-updated-range",
-  ) as HTMLSelectElement | null;
-  if (updatedSel) {
-    updatedSel.value = state.updatedRange;
-  }
-  const sortSel = doc.getElementById(
-    "lms-matrix-sort",
-  ) as HTMLSelectElement | null;
-  if (sortSel) {
-    sortSel.value = `${state.sortKey}:${state.sortDir}`;
-  }
+  const getValue = (id: string) =>
+    String((doc.getElementById(id) as any)?.value ?? "");
+  const setValue = (id: string, value: string) => {
+    const el = doc.getElementById(id) as any;
+    if (el) {
+      el.value = value;
+    }
+  };
+  setValue("lms-matrix-status", state.status);
+  setValue("lms-matrix-year", state.year);
+  setValue("lms-matrix-journal", state.journal);
+  setValue("lms-matrix-updated-range", state.updatedRange);
+  setValue("lms-matrix-sort", `${state.sortKey}:${state.sortDir}`);
   const renderTable = () => {
-    state.q =
-      (doc.getElementById("lms-matrix-q") as HTMLInputElement | null)?.value ||
-      "";
-    state.status =
-      (doc.getElementById("lms-matrix-status") as HTMLSelectElement | null)
-        ?.value || "all";
-    state.year =
-      (doc.getElementById("lms-matrix-year") as HTMLSelectElement | null)
-        ?.value || "all";
-    state.journal =
-      (doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null)
-        ?.value || "all";
-    state.updatedRange =
-      (
-        doc.getElementById(
-          "lms-matrix-updated-range",
-        ) as HTMLSelectElement | null
-      )?.value || "all";
-    state.tags =
-      (doc.getElementById("lms-matrix-tags") as HTMLInputElement | null)
-        ?.value || "";
+    state.q = getValue("lms-matrix-q");
+    state.status = getValue("lms-matrix-status") || "all";
+    state.year = getValue("lms-matrix-year") || "all";
+    state.journal = getValue("lms-matrix-journal") || "all";
+    state.updatedRange = getValue("lms-matrix-updated-range") || "all";
+    state.tags = getValue("lms-matrix-tags");
     const sortValue =
-      (doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null)
-        ?.value || `${state.sortKey}:${state.sortDir}`;
+      getValue("lms-matrix-sort") || `${state.sortKey}:${state.sortDir}`;
     const [nextSortKey, nextSortDir] = sortValue.split(":");
     if (nextSortKey && (nextSortDir === "asc" || nextSortDir === "desc")) {
       state.sortKey = nextSortKey;
@@ -1194,30 +1171,25 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       exportMdBtn.onclick = () => exportMatrixMarkdown(filtered);
     }
 
-    const sortSelect = doc.getElementById(
-      "lms-matrix-sort",
-    ) as HTMLSelectElement | null;
-    if (sortSelect) {
-      sortSelect.value = `${state.sortKey}:${state.sortDir}`;
-    }
+    setValue("lms-matrix-sort", `${state.sortKey}:${state.sortDir}`);
   };
-  doc.getElementById("lms-matrix-q")?.addEventListener("input", renderTable);
-  doc
-    .getElementById("lms-matrix-status")
-    ?.addEventListener("change", renderTable);
-  doc
-    .getElementById("lms-matrix-year")
-    ?.addEventListener("change", renderTable);
-  doc
-    .getElementById("lms-matrix-journal")
-    ?.addEventListener("change", renderTable);
-  doc
-    .getElementById("lms-matrix-updated-range")
-    ?.addEventListener("change", renderTable);
-  doc.getElementById("lms-matrix-tags")?.addEventListener("input", renderTable);
-  doc
-    .getElementById("lms-matrix-sort")
-    ?.addEventListener("change", renderTable);
+  const bindCommandOrChange = (id: string) => {
+    const el = doc.getElementById(id);
+    el?.addEventListener("command", renderTable as any);
+    el?.addEventListener("change", renderTable as any);
+  };
+  const bindInputOrCommand = (id: string) => {
+    const el = doc.getElementById(id);
+    el?.addEventListener("input", renderTable as any);
+    el?.addEventListener("command", renderTable as any);
+  };
+  bindInputOrCommand("lms-matrix-q");
+  bindCommandOrChange("lms-matrix-status");
+  bindCommandOrChange("lms-matrix-year");
+  bindCommandOrChange("lms-matrix-journal");
+  bindCommandOrChange("lms-matrix-updated-range");
+  bindInputOrCommand("lms-matrix-tags");
+  bindCommandOrChange("lms-matrix-sort");
   doc.getElementById("lms-matrix-refresh")?.addEventListener("click", () => {
     void renderMatrixPage(win);
   });
