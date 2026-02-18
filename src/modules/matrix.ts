@@ -1006,11 +1006,13 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       };
     });
 
-    const jumpBtns =
-      tableWrap.querySelectorAll<HTMLButtonElement>("[data-jump-item-id]");
-    jumpBtns.forEach((btn: HTMLButtonElement) => {
-      btn.onclick = () => {
-        const id = Number(btn.dataset.jumpItemId);
+    const jumpTargets: NodeListOf<HTMLElement> =
+      tableWrap.querySelectorAll<HTMLElement>("[data-jump-item-id]");
+    jumpTargets.forEach((el: HTMLElement) => {
+      el.onclick = (ev: Event) => {
+        ev.preventDefault?.();
+        ev.stopPropagation?.();
+        const id = Number(el.dataset.jumpItemId);
         if (!id) {
           return;
         }
@@ -1193,7 +1195,7 @@ function renderMatrixTableHTML(
       const displayTitle = getGuaranteedTitleByItemID(row.itemID);
       const titleHTML = row.hasPDF
         ? `<a href="#" data-open-pdf-item-id="${row.itemID}" style="color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</a>`
-        : `<span title="无PDF附件" style="color:#0f172a;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(displayTitle)}</span>`;
+        : `<a href="#" data-jump-item-id="${row.itemID}" title="无PDF附件，点击定位到条目" style="color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</a>`;
       const aiCells = AI_FIELDS.map(
         (field) =>
           `<td style="border:1px solid #e5e7eb;padding:6px 8px;vertical-align:top;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:320px;">${renderExpandableText(
