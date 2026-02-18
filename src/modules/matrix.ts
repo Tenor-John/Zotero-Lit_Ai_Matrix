@@ -884,6 +884,7 @@ type MatrixPageRow = {
   year: string;
   status: string;
   tags: string;
+  added: string;
   updated: string;
   activityDate: string;
   hasPDF: boolean;
@@ -921,11 +922,43 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   }
   root.innerHTML = `<div style="padding:16px;font-size:14px;">正在加载矩阵数据...</div>`;
   const rows = await buildMatrixPageRows();
+
+  const years = Array.from(
+    new Set(
+      rows
+        .map((r) => String(r.year || "").trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => Number(b) - Number(a));
+  const journals = Array.from(
+    new Set(rows.map((r) => normalizeVisibleText(r.journal) || "")),
+  ).sort((a, b) =>
+    a.localeCompare(b, "zh-CN", { numeric: true, sensitivity: "base" }),
+  );
+
   const state =
     ((win as any).__lmsMatrixPageState as
-      | { q: string; status: string; sortKey: string; sortDir: "asc" | "desc" }
+      | {
+          q: string;
+          status: string;
+          year: string;
+          journal: string;
+          updatedRange: string;
+          tags: string;
+          sortKey: string;
+          sortDir: "asc" | "desc";
+        }
       | undefined) ||
-    { q: "", status: "all", sortKey: "updated", sortDir: "desc" };
+    {
+      q: "",
+      status: "all",
+      year: "all",
+      journal: "all",
+      updatedRange: "all",
+      tags: "",
+      sortKey: "added",
+      sortDir: "desc",
+    };
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
     <div style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
@@ -936,15 +969,76 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
           <input id="lms-matrix-q" type="text" placeholder="搜索标题/期刊/AI字段" value="${escapeHTML(state.q)}" style="min-width:320px;flex:1 1 320px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;"/>
-          <select id="lms-matrix-status" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;">
-            <option value="all">全部状态</option>
-            <option value="done">已读</option>
-            <option value="reading">在读</option>
-            <option value="unread">未读</option>
-          </select>
           <button id="lms-matrix-export-csv" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">导出CSV</button>
           <button id="lms-matrix-export-md" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">导出Markdown</button>
           <button id="lms-matrix-refresh" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">刷新</button>
+        </div>
+      </div>
+      <div id="lms-matrix-filters-wrap" style="padding:10px 12px;background:#fff;border-bottom:1px solid #eee;">
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc;">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;align-items:end;">
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">阅读状态</div>
+              <select id="lms-matrix-status" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                <option value="all">全部状态</option>
+                <option value="done">已读</option>
+                <option value="reading">在读</option>
+                <option value="unread">未读</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">年份</div>
+              <select id="lms-matrix-year" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                <option value="all">全部年份</option>
+                ${years
+                  .map(
+                    (y) =>
+                      `<option value="${escapeHTML(y)}">${escapeHTML(y)}</option>`,
+                  )
+                  .join("")}
+              </select>
+            </div>
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">分类</div>
+              <select id="lms-matrix-journal" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                <option value="all">全部分类</option>
+                <option value="__empty__">未分类</option>
+                ${journals
+                  .filter((j) => j)
+                  .map(
+                    (j) =>
+                      `<option value="${escapeHTML(j)}">${escapeHTML(j)}</option>`,
+                  )
+                  .join("")}
+              </select>
+            </div>
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">修改时间</div>
+              <select id="lms-matrix-updated-range" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                <option value="all">不限</option>
+                <option value="7d">近7天</option>
+                <option value="30d">近30天</option>
+                <option value="365d">近365天</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:end;margin-top:12px;">
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">标签</div>
+              <input id="lms-matrix-tags" type="text" placeholder="全部标签" value="${escapeHTML(state.tags)}" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;"/>
+            </div>
+            <div>
+              <div style="font-size:12px;color:#475569;margin-bottom:6px;">排序方式</div>
+              <select id="lms-matrix-sort" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
+                <option value="added:desc">最新导入</option>
+                <option value="updated:desc">最新修改</option>
+                <option value="year:desc">年份（新→旧）</option>
+                <option value="year:asc">年份（旧→新）</option>
+                <option value="title:asc">标题（A→Z）</option>
+                <option value="title:desc">标题（Z→A）</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
       <div id="lms-matrix-stats-wrap" style="padding:8px 12px;background:#fff;border-bottom:1px solid #eee;"></div>
@@ -955,16 +1049,56 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   if (statusSel) {
     statusSel.value = state.status;
   }
+  const yearSel = doc.getElementById("lms-matrix-year") as HTMLSelectElement | null;
+  if (yearSel) {
+    yearSel.value = state.year;
+  }
+  const journalSel = doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null;
+  if (journalSel) {
+    journalSel.value = state.journal;
+  }
+  const updatedSel = doc.getElementById("lms-matrix-updated-range") as HTMLSelectElement | null;
+  if (updatedSel) {
+    updatedSel.value = state.updatedRange;
+  }
+  const sortSel = doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null;
+  if (sortSel) {
+    sortSel.value = `${state.sortKey}:${state.sortDir}`;
+  }
   const renderTable = () => {
     state.q = (doc.getElementById("lms-matrix-q") as HTMLInputElement | null)?.value || "";
     state.status =
       (doc.getElementById("lms-matrix-status") as HTMLSelectElement | null)?.value || "all";
+    state.year =
+      (doc.getElementById("lms-matrix-year") as HTMLSelectElement | null)?.value || "all";
+    state.journal =
+      (doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null)?.value || "all";
+    state.updatedRange =
+      (doc.getElementById("lms-matrix-updated-range") as HTMLSelectElement | null)?.value ||
+      "all";
+    state.tags = (doc.getElementById("lms-matrix-tags") as HTMLInputElement | null)?.value || "";
+    const sortValue =
+      (doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null)?.value ||
+      `${state.sortKey}:${state.sortDir}`;
+    const [nextSortKey, nextSortDir] = sortValue.split(":");
+    if (nextSortKey && (nextSortDir === "asc" || nextSortDir === "desc")) {
+      state.sortKey = nextSortKey;
+      state.sortDir = nextSortDir;
+    }
     const tableWrap = doc.getElementById("lms-matrix-table-wrap") as HTMLDivElement | null;
     const statsWrap = doc.getElementById("lms-matrix-stats-wrap") as HTMLDivElement | null;
     if (!tableWrap) {
       return;
     }
-    const filtered = filterMatrixRows(rows, state.q, state.status);
+    const filtered = filterMatrixRows(
+      rows,
+      state.q,
+      state.status,
+      state.year,
+      state.journal,
+      state.updatedRange,
+      state.tags,
+    );
     const sorted = sortMatrixRows(filtered, state.sortKey, state.sortDir);
     if (statsWrap) {
       statsWrap.innerHTML = renderMatrixStatsHTML(sorted);
@@ -1032,13 +1166,32 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     if (exportMdBtn) {
       exportMdBtn.onclick = () => exportMatrixMarkdown(filtered);
     }
+
+    const sortSelect = doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null;
+    if (sortSelect) {
+      sortSelect.value = `${state.sortKey}:${state.sortDir}`;
+    }
   };
   doc.getElementById("lms-matrix-q")?.addEventListener("input", renderTable);
   doc.getElementById("lms-matrix-status")?.addEventListener("change", renderTable);
+  doc.getElementById("lms-matrix-year")?.addEventListener("change", renderTable);
+  doc.getElementById("lms-matrix-journal")?.addEventListener("change", renderTable);
+  doc.getElementById("lms-matrix-updated-range")?.addEventListener("change", renderTable);
+  doc.getElementById("lms-matrix-tags")?.addEventListener("input", renderTable);
+  doc.getElementById("lms-matrix-sort")?.addEventListener("change", renderTable);
   doc.getElementById("lms-matrix-refresh")?.addEventListener("click", () => {
     void renderMatrixPage(win);
   });
   renderTable();
+}
+
+function parseISODateMs(isoDate: string): number {
+  const iso = String(isoDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return 0;
+  }
+  const t = Date.parse(`${iso}T00:00:00Z`);
+  return Number.isFinite(t) ? t : 0;
 }
 
 function sortMatrixRows(
@@ -1053,14 +1206,7 @@ function sortMatrixRows(
     const n = Number(String(y || "").trim());
     return Number.isFinite(n) ? n : -1;
   };
-  const parseISODate = (d: string) => {
-    const iso = String(d || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-      return -1;
-    }
-    const t = Date.parse(`${iso}T00:00:00Z`);
-    return Number.isFinite(t) ? t : -1;
-  };
+  const parseISODate = (d: string) => parseISODateMs(d) || -1;
   const getAIField = (key: string) =>
     key.startsWith("ai__") ? fromSafeAIKey(key.slice(4)) : "";
 
@@ -1097,6 +1243,9 @@ function sortMatrixRows(
     }
     if (sortKey === "updated") {
       return dir * (parseISODate(a.updated) - parseISODate(b.updated));
+    }
+    if (sortKey === "added") {
+      return dir * (parseISODate(a.added) - parseISODate(b.added));
     }
     const aiField = getAIField(sortKey);
     if (aiField) {
@@ -1136,6 +1285,7 @@ async function buildMatrixPageRows(): Promise<MatrixPageRow[]> {
         .map((t) => String(t.tag || "").trim())
         .filter(Boolean)
         .join(", "),
+      added: String((item as any).dateAdded || (item as any).dateAddedUTC || "").slice(0, 10),
       updated: String(item.dateModified || "").slice(0, 10),
       activityDate: String(payload?.sourceNoteDateModified || item.dateModified || "").slice(
         0,
@@ -1150,12 +1300,56 @@ async function buildMatrixPageRows(): Promise<MatrixPageRow[]> {
   return rows;
 }
 
-function filterMatrixRows(rows: MatrixPageRow[], q: string, status: string) {
+function filterMatrixRows(
+  rows: MatrixPageRow[],
+  q: string,
+  status: string,
+  year: string,
+  journal: string,
+  updatedRange: string,
+  tags: string,
+) {
   const keyword = q.trim().toLowerCase();
+  const tagsQuery = tags.trim().toLowerCase();
+  const now = Date.now();
+  const days =
+    updatedRange === "7d"
+      ? 7
+      : updatedRange === "30d"
+        ? 30
+        : updatedRange === "365d"
+          ? 365
+          : 0;
+  const threshold = days ? now - days * 24 * 60 * 60 * 1000 : 0;
+
   return rows.filter((row) => {
-    const matchStatus = status === "all" || row.status === status;
-    if (!matchStatus) {
+    if (!(status === "all" || row.status === status)) {
       return false;
+    }
+    if (!(year === "all" || String(row.year || "").trim() === year)) {
+      return false;
+    }
+    const rowJournal = normalizeVisibleText(row.journal) || "";
+    if (journal !== "all") {
+      if (journal === "__empty__") {
+        if (rowJournal) {
+          return false;
+        }
+      } else if (rowJournal !== journal) {
+        return false;
+      }
+    }
+    if (threshold) {
+      const t = parseISODateMs(row.updated);
+      if (!t || t < threshold) {
+        return false;
+      }
+    }
+    if (tagsQuery) {
+      const hay = String(row.tags || "").toLowerCase();
+      if (!hay.includes(tagsQuery)) {
+        return false;
+      }
     }
     if (!keyword) {
       return true;
