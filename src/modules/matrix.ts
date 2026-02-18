@@ -964,6 +964,93 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
     <div xmlns="http://www.w3.org/1999/xhtml" xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
+      <style>
+        .lms-stat-grid {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(120px, 1fr));
+          gap: 10px;
+        }
+        .lms-stat-card {
+          background: linear-gradient(145deg, #0d1117, #111827);
+          border: 1px solid #30363d;
+          border-radius: 16px;
+          padding: 14px 16px;
+          height: 120px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+        }
+        .lms-stat-label {
+          font-size: 12px;
+          color: #8b949e;
+          margin-bottom: 6px;
+        }
+        .lms-stat-number {
+          font-size: 42px;
+          font-weight: 700;
+          line-height: 1;
+          background: linear-gradient(90deg, var(--lms-grad-a, #0f766e), var(--lms-grad-b, #155e75));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent;
+        }
+        .lms-stat-card--total { --lms-grad-a: #e5e7eb; --lms-grad-b: #64748b; }
+        .lms-stat-card--done { --lms-grad-a: #0f766e; --lms-grad-b: #155e75; }
+        .lms-stat-card--reading { --lms-grad-a: #1d4ed8; --lms-grad-b: #1e40af; }
+        .lms-stat-card--unread { --lms-grad-a: #334155; --lms-grad-b: #64748b; }
+
+        .lms-rank-card {
+          background: linear-gradient(145deg, #0d1117, #111827);
+          border: 1px solid #30363d;
+          border-radius: 16px;
+          padding: 12px 14px;
+          height: 120px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+        }
+        .lms-rank-title {
+          font-size: 12px;
+          color: #8b949e;
+          margin-bottom: 8px;
+        }
+        .lms-rank-row {
+          display: grid;
+          grid-template-columns: 1fr 36px;
+          gap: 8px;
+          align-items: center;
+          margin: 2px 0;
+        }
+        .lms-rank-name {
+          color: #e5e7eb;
+          font-size: 12px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .lms-rank-count {
+          color: #e5e7eb;
+          font-size: 12px;
+          text-align: right;
+          font-variant-numeric: tabular-nums;
+        }
+        .lms-rank-bar {
+          grid-column: 1 / span 2;
+          height: 8px;
+          border-radius: 999px;
+          background: #161b22;
+          border: 1px solid #30363d;
+          overflow: hidden;
+        }
+        .lms-rank-bar > div {
+          height: 100%;
+          width: var(--lms-w, 0%);
+          background: linear-gradient(90deg, #0f766e, #155e75);
+        }
+      </style>
       <div style="padding:12px 12px 8px 12px;border-bottom:1px solid #ddd;background:#f8fafc;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
           <div style="font-size:18px;font-weight:700;">智能文献矩阵</div>
@@ -1512,41 +1599,47 @@ function renderMatrixStatsHTML(rows: MatrixPageRow[]) {
   const topJournals = [...journalMap.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
-  const listHTML = (pairs: Array<[string, number]>) =>
-    pairs
-      .map(
-        ([name, count]) =>
-          `<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.4;">
-            <span style="color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHTML(name)}</span>
-            <span style="color:#0f172a;font-weight:600;">${count}</span>
-          </div>`,
-      )
+
+  const renderRankList = (pairs: Array<[string, number]>) => {
+    const max = Math.max(1, ...pairs.map((p) => p[1]));
+    return pairs
+      .map(([name, count]) => {
+        const w = Math.max(0, Math.min(100, Math.round((count / max) * 100)));
+        return `
+          <div class="lms-rank-row">
+            <div class="lms-rank-name" title="${escapeHTML(name)}">${escapeHTML(name)}</div>
+            <div class="lms-rank-count">${count}</div>
+            <div class="lms-rank-bar"><div style="--lms-w:${w}%;"></div></div>
+          </div>
+        `;
+      })
       .join("");
+  };
   return `
-    <div style="display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;">
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc;">
-        <div style="font-size:12px;color:#64748b;">筛选后总数</div>
-        <div style="font-size:20px;font-weight:700;color:#0f172a;">${rows.length}</div>
+    <div class="lms-stat-grid">
+      <div class="lms-stat-card lms-stat-card--total">
+        <div class="lms-stat-label">筛选后总数</div>
+        <div class="lms-stat-number">${rows.length}</div>
       </div>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#ecfeff;">
-        <div style="font-size:12px;color:#155e75;">已读</div>
-        <div style="font-size:20px;font-weight:700;color:#0f766e;">${done}</div>
+      <div class="lms-stat-card lms-stat-card--done">
+        <div class="lms-stat-label">已读</div>
+        <div class="lms-stat-number">${done}</div>
       </div>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#eff6ff;">
-        <div style="font-size:12px;color:#1e40af;">在读</div>
-        <div style="font-size:20px;font-weight:700;color:#1d4ed8;">${reading}</div>
+      <div class="lms-stat-card lms-stat-card--reading">
+        <div class="lms-stat-label">在读</div>
+        <div class="lms-stat-number">${reading}</div>
       </div>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc;">
-        <div style="font-size:12px;color:#475569;">未读</div>
-        <div style="font-size:20px;font-weight:700;color:#334155;">${unread}</div>
+      <div class="lms-stat-card lms-stat-card--unread">
+        <div class="lms-stat-label">未读</div>
+        <div class="lms-stat-number">${unread}</div>
       </div>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fff;">
-        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">Top 年份</div>
-        ${listHTML(topYears)}
+      <div class="lms-rank-card">
+        <div class="lms-rank-title">Top 年份</div>
+        ${renderRankList(topYears)}
       </div>
-      <div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fff;">
-        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">Top 期刊</div>
-        ${listHTML(topJournals)}
+      <div class="lms-rank-card">
+        <div class="lms-rank-title">Top 期刊</div>
+        ${renderRankList(topJournals)}
       </div>
     </div>
     <div style="margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fff;">
