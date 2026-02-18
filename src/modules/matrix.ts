@@ -968,6 +968,18 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
         renderTable();
       };
     });
+    const openPdfBtns =
+      tableWrap.querySelectorAll<HTMLButtonElement>("[data-open-pdf-item-id]");
+    openPdfBtns.forEach((btn: HTMLButtonElement) => {
+      btn.onclick = async () => {
+        const id = Number(btn.dataset.openPdfItemId);
+        if (!id) {
+          return;
+        }
+        await openPdfForItem(id);
+      };
+    });
+
     const jumpBtns =
       tableWrap.querySelectorAll<HTMLButtonElement>("[data-jump-item-id]");
     jumpBtns.forEach((btn: HTMLButtonElement) => {
@@ -1162,7 +1174,7 @@ function renderMatrixTableHTML(
       return `
       <tr>
         <td style="border:1px solid #e5e7eb;padding:6px 8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:360px;">
-          <div style="color:#0f172a;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(displayTitle)}</div>
+          <button data-open-pdf-item-id="${row.itemID}" style="padding:0;border:none;background:none;color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</button>
           <button data-jump-item-id="${row.itemID}" style="margin-top:4px;padding:0;border:none;background:none;color:#0f766e;cursor:pointer;text-align:left;font-size:11px;">定位到条目</button>
           <div style="margin-top:2px;font-size:10px;color:#64748b;">ID:${row.itemID}</div>
         </td>
@@ -1607,6 +1619,34 @@ function getGuaranteedTitleByItemID(itemID: number): string {
     return getPreferredItemTitle(item);
   }
   return `[item:${itemID}]`;
+}
+
+async function openPdfForItem(itemID: number) {
+  try {
+    const item = Zotero.Items.get(itemID);
+    if (!item) {
+      return;
+    }
+    let pdfAttachment: Zotero.Item | undefined;
+    if (item.isPDFAttachment?.()) {
+      pdfAttachment = item;
+    } else if (item.isRegularItem?.()) {
+      const best = (await item.getBestAttachment()) as Zotero.Item | false;
+      if (best && best.isPDFAttachment?.()) {
+        pdfAttachment = best;
+      }
+    }
+    if (pdfAttachment) {
+      await ztoolkit
+        .getGlobal("ZoteroPane")
+        .viewPDF(pdfAttachment.id, {} as _ZoteroTypes.Reader.Location);
+      return;
+    }
+  } catch (e) {
+    ztoolkit.log("openPdfForItem failed", e);
+  }
+  ztoolkit.getGlobal("Zotero_Tabs").select("zotero-pane");
+  ztoolkit.getGlobal("ZoteroPane").selectItem(itemID);
 }
 
 function getFirstAttachmentTitle(item: Zotero.Item): string {
