@@ -441,7 +441,10 @@ export class MatrixFeature {
         applyTabIcon();
       }, 120);
     }
-    const root = win.document.createElement("div");
+    const root = win.document.createElementNS(
+      "http://www.w3.org/1999/xhtml",
+      "div",
+    ) as HTMLDivElement;
     root.id = `${MATRIX_PAGE_ROOT_ID}-${tabID}`;
     root.style.height = "100%";
     root.style.overflow = "auto";
