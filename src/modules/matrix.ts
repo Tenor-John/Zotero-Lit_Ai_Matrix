@@ -886,8 +886,30 @@ type MatrixPageRow = {
   tags: string;
   updated: string;
   activityDate: string;
+  hasPDF: boolean;
   ai: Record<MatrixAIKey, string>;
 };
+
+function hasPdfAttachment(item: Zotero.Item): boolean {
+  try {
+    if (item?.isPDFAttachment?.()) {
+      return true;
+    }
+    if (!item?.isRegularItem?.()) {
+      return false;
+    }
+    const attachmentIDs = item.getAttachments?.() || [];
+    for (const id of attachmentIDs) {
+      const att = Zotero.Items.get(id);
+      if (att?.isPDFAttachment?.()) {
+        return true;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
 
 async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   const doc = win.document;
@@ -1117,6 +1139,7 @@ async function buildMatrixPageRows(): Promise<MatrixPageRow[]> {
         0,
         10,
       ),
+      hasPDF: hasPdfAttachment(item),
       ai:
         payload?.ai ||
         (Object.fromEntries(AI_FIELDS.map((k) => [k, ""])) as Record<MatrixAIKey, string>),
@@ -1168,6 +1191,9 @@ function renderMatrixTableHTML(
   const body = rows
     .map((row) => {
       const displayTitle = getGuaranteedTitleByItemID(row.itemID);
+      const titleHTML = row.hasPDF
+        ? `<a href="#" data-open-pdf-item-id="${row.itemID}" style="color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</a>`
+        : `<span title="无PDF附件" style="color:#0f172a;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${escapeHTML(displayTitle)}</span>`;
       const aiCells = AI_FIELDS.map(
         (field) =>
           `<td style="border:1px solid #e5e7eb;padding:6px 8px;vertical-align:top;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:320px;">${renderExpandableText(
@@ -1178,7 +1204,7 @@ function renderMatrixTableHTML(
       return `
       <tr>
         <td style="border:1px solid #e5e7eb;padding:6px 8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:360px;">
-          <a href="#" data-open-pdf-item-id="${row.itemID}" style="color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</a>
+          ${titleHTML}
           <button data-jump-item-id="${row.itemID}" style="margin-top:4px;padding:0;border:none;background:none;color:#0f766e;cursor:pointer;text-align:left;font-size:11px;">定位到条目</button>
           <div style="margin-top:2px;font-size:10px;color:#64748b;">ID:${row.itemID}</div>
         </td>
