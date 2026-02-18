@@ -968,11 +968,15 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
         renderTable();
       };
     });
-    const openPdfBtns =
-      tableWrap.querySelectorAll<HTMLButtonElement>("[data-open-pdf-item-id]");
-    openPdfBtns.forEach((btn: HTMLButtonElement) => {
-      btn.onclick = async () => {
-        const id = Number(btn.dataset.openPdfItemId);
+    const openPdfTargets: NodeListOf<HTMLElement> =
+      tableWrap.querySelectorAll<HTMLElement>(
+      "[data-open-pdf-item-id]",
+    );
+    openPdfTargets.forEach((el: HTMLElement) => {
+      el.onclick = async (ev: Event) => {
+        ev.preventDefault?.();
+        ev.stopPropagation?.();
+        const id = Number(el.dataset.openPdfItemId);
         if (!id) {
           return;
         }
@@ -1174,7 +1178,7 @@ function renderMatrixTableHTML(
       return `
       <tr>
         <td style="border:1px solid #e5e7eb;padding:6px 8px;white-space:normal;word-break:break-word;overflow-wrap:anywhere;max-width:360px;">
-          <button data-open-pdf-item-id="${row.itemID}" style="padding:0;border:none;background:none;color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</button>
+          <a href="#" data-open-pdf-item-id="${row.itemID}" style="color:#0f172a;cursor:pointer;text-align:left;font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;text-decoration:underline;">${escapeHTML(displayTitle)}</a>
           <button data-jump-item-id="${row.itemID}" style="margin-top:4px;padding:0;border:none;background:none;color:#0f766e;cursor:pointer;text-align:left;font-size:11px;">定位到条目</button>
           <div style="margin-top:2px;font-size:10px;color:#64748b;">ID:${row.itemID}</div>
         </td>
