@@ -217,7 +217,10 @@ export class MatrixFeature {
         const chunk = allItems.slice(i, i + CHUNK_SIZE);
         await rebuildForRegularItems(chunk);
         processed += chunk.length;
-        const progress = Math.min(99, Math.floor((processed / allItems.length) * 100));
+        const progress = Math.min(
+          99,
+          Math.floor((processed / allItems.length) * 100),
+        );
         popup.changeLine({
           text: `重建中... ${processed}/${allItems.length}`,
           type: "default",
@@ -240,7 +243,9 @@ export class MatrixFeature {
     }
   }
 
-  static async setStatusForSelectedItems(status: "done" | "reading" | "unread") {
+  static async setStatusForSelectedItems(
+    status: "done" | "reading" | "unread",
+  ) {
     const selected = ztoolkit.getGlobal("ZoteroPane").getSelectedItems() || [];
     const regularItems = selected.filter((item: Zotero.Item) =>
       item.isRegularItem(),
@@ -287,7 +292,8 @@ export class MatrixFeature {
           }
           return column.provider(item);
         },
-        iconPath: column.iconPath || "chrome://zotero/skin/16/universal/book.svg",
+        iconPath:
+          column.iconPath || "chrome://zotero/skin/16/universal/book.svg",
       });
       registeredColumnKeys.push(column.dataKey);
     }
@@ -554,8 +560,8 @@ async function flushAutoRebuildQueue() {
       batchIDs.forEach((id) => pendingAutoRebuildIDs.delete(id));
 
       const batchItems = await Zotero.Items.getAsync(batchIDs);
-      const regularItems = batchItems.filter(
-        (it): it is Zotero.Item => Boolean(it && it.isRegularItem()),
+      const regularItems = batchItems.filter((it): it is Zotero.Item =>
+        Boolean(it && it.isRegularItem()),
       );
 
       if (regularItems.length) {
@@ -711,7 +717,9 @@ function judgeMatrixNote(title: string, tags: string[], plainText: string) {
   }
   const includeByTag = tags.includes(MATRIX_INCLUDE_TAG);
   const includeByTitle = title.startsWith(MATRIX_TITLE_PREFIX);
-  const fieldCount = AI_FIELDS.filter((k) => plainText.includes(`${k}::`)).length;
+  const fieldCount = AI_FIELDS.filter((k) =>
+    plainText.includes(`${k}::`),
+  ).length;
   const includeByFields = fieldCount >= 3;
   if (!includeByTag && !includeByTitle && !includeByFields) {
     return { accepted: false, fieldCount: 0, score: 0 };
@@ -776,10 +784,7 @@ function extractDataviewField(text: string, key: string): string {
       valueEnd = nextIndex;
     }
   }
-  return text
-    .slice(valueStart, valueEnd)
-    .replace(/\s+/g, " ")
-    .trim();
+  return text.slice(valueStart, valueEnd).replace(/\s+/g, " ").trim();
 }
 
 function normalizeText(noteHTML: string): string {
@@ -924,11 +929,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
   const rows = await buildMatrixPageRows();
 
   const years = Array.from(
-    new Set(
-      rows
-        .map((r) => String(r.year || "").trim())
-        .filter(Boolean),
-    ),
+    new Set(rows.map((r) => String(r.year || "").trim()).filter(Boolean)),
   ).sort((a, b) => Number(b) - Number(a));
   const journals = Array.from(
     new Set(rows.map((r) => normalizeVisibleText(r.journal) || "")),
@@ -936,29 +937,27 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     a.localeCompare(b, "zh-CN", { numeric: true, sensitivity: "base" }),
   );
 
-  const state =
-    ((win as any).__lmsMatrixPageState as
-      | {
-          q: string;
-          status: string;
-          year: string;
-          journal: string;
-          updatedRange: string;
-          tags: string;
-          sortKey: string;
-          sortDir: "asc" | "desc";
-        }
-      | undefined) ||
-    {
-      q: "",
-      status: "all",
-      year: "all",
-      journal: "all",
-      updatedRange: "all",
-      tags: "",
-      sortKey: "added",
-      sortDir: "desc",
-    };
+  const state = ((win as any).__lmsMatrixPageState as
+    | {
+        q: string;
+        status: string;
+        year: string;
+        journal: string;
+        updatedRange: string;
+        tags: string;
+        sortKey: string;
+        sortDir: "asc" | "desc";
+      }
+    | undefined) || {
+    q: "",
+    status: "all",
+    year: "all",
+    journal: "all",
+    updatedRange: "all",
+    tags: "",
+    sortKey: "added",
+    sortDir: "desc",
+  };
   (win as any).__lmsMatrixPageState = state;
   root.innerHTML = `
     <div style="display:flex;flex-direction:column;height:100%;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#222;">
@@ -1045,48 +1044,72 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       <div id="lms-matrix-table-wrap" style="flex:1 1 auto;overflow:auto;padding:8px 12px 12px 12px;background:#fff;"></div>
     </div>
   `;
-  const statusSel = doc.getElementById("lms-matrix-status") as HTMLSelectElement | null;
+  const statusSel = doc.getElementById(
+    "lms-matrix-status",
+  ) as HTMLSelectElement | null;
   if (statusSel) {
     statusSel.value = state.status;
   }
-  const yearSel = doc.getElementById("lms-matrix-year") as HTMLSelectElement | null;
+  const yearSel = doc.getElementById(
+    "lms-matrix-year",
+  ) as HTMLSelectElement | null;
   if (yearSel) {
     yearSel.value = state.year;
   }
-  const journalSel = doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null;
+  const journalSel = doc.getElementById(
+    "lms-matrix-journal",
+  ) as HTMLSelectElement | null;
   if (journalSel) {
     journalSel.value = state.journal;
   }
-  const updatedSel = doc.getElementById("lms-matrix-updated-range") as HTMLSelectElement | null;
+  const updatedSel = doc.getElementById(
+    "lms-matrix-updated-range",
+  ) as HTMLSelectElement | null;
   if (updatedSel) {
     updatedSel.value = state.updatedRange;
   }
-  const sortSel = doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null;
+  const sortSel = doc.getElementById(
+    "lms-matrix-sort",
+  ) as HTMLSelectElement | null;
   if (sortSel) {
     sortSel.value = `${state.sortKey}:${state.sortDir}`;
   }
   const renderTable = () => {
-    state.q = (doc.getElementById("lms-matrix-q") as HTMLInputElement | null)?.value || "";
+    state.q =
+      (doc.getElementById("lms-matrix-q") as HTMLInputElement | null)?.value ||
+      "";
     state.status =
-      (doc.getElementById("lms-matrix-status") as HTMLSelectElement | null)?.value || "all";
+      (doc.getElementById("lms-matrix-status") as HTMLSelectElement | null)
+        ?.value || "all";
     state.year =
-      (doc.getElementById("lms-matrix-year") as HTMLSelectElement | null)?.value || "all";
+      (doc.getElementById("lms-matrix-year") as HTMLSelectElement | null)
+        ?.value || "all";
     state.journal =
-      (doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null)?.value || "all";
+      (doc.getElementById("lms-matrix-journal") as HTMLSelectElement | null)
+        ?.value || "all";
     state.updatedRange =
-      (doc.getElementById("lms-matrix-updated-range") as HTMLSelectElement | null)?.value ||
-      "all";
-    state.tags = (doc.getElementById("lms-matrix-tags") as HTMLInputElement | null)?.value || "";
+      (
+        doc.getElementById(
+          "lms-matrix-updated-range",
+        ) as HTMLSelectElement | null
+      )?.value || "all";
+    state.tags =
+      (doc.getElementById("lms-matrix-tags") as HTMLInputElement | null)
+        ?.value || "";
     const sortValue =
-      (doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null)?.value ||
-      `${state.sortKey}:${state.sortDir}`;
+      (doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null)
+        ?.value || `${state.sortKey}:${state.sortDir}`;
     const [nextSortKey, nextSortDir] = sortValue.split(":");
     if (nextSortKey && (nextSortDir === "asc" || nextSortDir === "desc")) {
       state.sortKey = nextSortKey;
       state.sortDir = nextSortDir;
     }
-    const tableWrap = doc.getElementById("lms-matrix-table-wrap") as HTMLDivElement | null;
-    const statsWrap = doc.getElementById("lms-matrix-stats-wrap") as HTMLDivElement | null;
+    const tableWrap = doc.getElementById(
+      "lms-matrix-table-wrap",
+    ) as HTMLDivElement | null;
+    const statsWrap = doc.getElementById(
+      "lms-matrix-stats-wrap",
+    ) as HTMLDivElement | null;
     if (!tableWrap) {
       return;
     }
@@ -1104,11 +1127,14 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       statsWrap.innerHTML = renderMatrixStatsHTML(sorted);
     }
     bindHeatmapTooltip(doc);
-    tableWrap.innerHTML = renderMatrixTableHTML(sorted, state.sortKey, state.sortDir);
-
-    const sortBtns = tableWrap.querySelectorAll<HTMLButtonElement>(
-      "[data-sort-key]",
+    tableWrap.innerHTML = renderMatrixTableHTML(
+      sorted,
+      state.sortKey,
+      state.sortDir,
     );
+
+    const sortBtns =
+      tableWrap.querySelectorAll<HTMLButtonElement>("[data-sort-key]");
     sortBtns.forEach((btn: HTMLButtonElement) => {
       btn.onclick = () => {
         const key = String(btn.dataset.sortKey || "");
@@ -1125,9 +1151,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       };
     });
     const openPdfTargets: NodeListOf<HTMLElement> =
-      tableWrap.querySelectorAll<HTMLElement>(
-      "[data-open-pdf-item-id]",
-    );
+      tableWrap.querySelectorAll<HTMLElement>("[data-open-pdf-item-id]");
     openPdfTargets.forEach((el: HTMLElement) => {
       el.onclick = async (ev: Event) => {
         ev.preventDefault?.();
@@ -1154,12 +1178,12 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
         ztoolkit.getGlobal("ZoteroPane").selectItem(id);
       };
     });
-    const exportCsvBtn = doc.getElementById("lms-matrix-export-csv") as
-      | HTMLButtonElement
-      | null;
-    const exportMdBtn = doc.getElementById("lms-matrix-export-md") as
-      | HTMLButtonElement
-      | null;
+    const exportCsvBtn = doc.getElementById(
+      "lms-matrix-export-csv",
+    ) as HTMLButtonElement | null;
+    const exportMdBtn = doc.getElementById(
+      "lms-matrix-export-md",
+    ) as HTMLButtonElement | null;
     if (exportCsvBtn) {
       exportCsvBtn.onclick = () => exportMatrixCSV(filtered);
     }
@@ -1167,18 +1191,30 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       exportMdBtn.onclick = () => exportMatrixMarkdown(filtered);
     }
 
-    const sortSelect = doc.getElementById("lms-matrix-sort") as HTMLSelectElement | null;
+    const sortSelect = doc.getElementById(
+      "lms-matrix-sort",
+    ) as HTMLSelectElement | null;
     if (sortSelect) {
       sortSelect.value = `${state.sortKey}:${state.sortDir}`;
     }
   };
   doc.getElementById("lms-matrix-q")?.addEventListener("input", renderTable);
-  doc.getElementById("lms-matrix-status")?.addEventListener("change", renderTable);
-  doc.getElementById("lms-matrix-year")?.addEventListener("change", renderTable);
-  doc.getElementById("lms-matrix-journal")?.addEventListener("change", renderTable);
-  doc.getElementById("lms-matrix-updated-range")?.addEventListener("change", renderTable);
+  doc
+    .getElementById("lms-matrix-status")
+    ?.addEventListener("change", renderTable);
+  doc
+    .getElementById("lms-matrix-year")
+    ?.addEventListener("change", renderTable);
+  doc
+    .getElementById("lms-matrix-journal")
+    ?.addEventListener("change", renderTable);
+  doc
+    .getElementById("lms-matrix-updated-range")
+    ?.addEventListener("change", renderTable);
   doc.getElementById("lms-matrix-tags")?.addEventListener("input", renderTable);
-  doc.getElementById("lms-matrix-sort")?.addEventListener("change", renderTable);
+  doc
+    .getElementById("lms-matrix-sort")
+    ?.addEventListener("change", renderTable);
   doc.getElementById("lms-matrix-refresh")?.addEventListener("click", () => {
     void renderMatrixPage(win);
   });
@@ -1212,22 +1248,35 @@ function sortMatrixRows(
 
   const comparator = (a: MatrixPageRow, b: MatrixPageRow) => {
     if (sortKey === "title") {
-      return dir * String(a.title || "").localeCompare(String(b.title || ""), "zh-CN", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return (
+        dir *
+        String(a.title || "").localeCompare(String(b.title || ""), "zh-CN", {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
     }
     if (sortKey === "author") {
-      return dir * String(a.author || "").localeCompare(String(b.author || ""), "zh-CN", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return (
+        dir *
+        String(a.author || "").localeCompare(String(b.author || ""), "zh-CN", {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
     }
     if (sortKey === "journal") {
-      return dir * String(a.journal || "").localeCompare(String(b.journal || ""), "zh-CN", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return (
+        dir *
+        String(a.journal || "").localeCompare(
+          String(b.journal || ""),
+          "zh-CN",
+          {
+            numeric: true,
+            sensitivity: "base",
+          },
+        )
+      );
     }
     if (sortKey === "year") {
       return dir * (parseYear(a.year) - parseYear(b.year));
@@ -1236,10 +1285,13 @@ function sortMatrixRows(
       return dir * (statusWeight(a.status) - statusWeight(b.status));
     }
     if (sortKey === "tags") {
-      return dir * String(a.tags || "").localeCompare(String(b.tags || ""), "zh-CN", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return (
+        dir *
+        String(a.tags || "").localeCompare(String(b.tags || ""), "zh-CN", {
+          numeric: true,
+          sensitivity: "base",
+        })
+      );
     }
     if (sortKey === "updated") {
       return dir * (parseISODate(a.updated) - parseISODate(b.updated));
@@ -1249,10 +1301,17 @@ function sortMatrixRows(
     }
     const aiField = getAIField(sortKey);
     if (aiField) {
-      return dir * String(a.ai[aiField] || "").localeCompare(String(b.ai[aiField] || ""), "zh-CN", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return (
+        dir *
+        String(a.ai[aiField] || "").localeCompare(
+          String(b.ai[aiField] || ""),
+          "zh-CN",
+          {
+            numeric: true,
+            sensitivity: "base",
+          },
+        )
+      );
     }
     return dir * (a.itemID - b.itemID);
   };
@@ -1285,16 +1344,20 @@ async function buildMatrixPageRows(): Promise<MatrixPageRow[]> {
         .map((t) => String(t.tag || "").trim())
         .filter(Boolean)
         .join(", "),
-      added: String((item as any).dateAdded || (item as any).dateAddedUTC || "").slice(0, 10),
+      added: String(
+        (item as any).dateAdded || (item as any).dateAddedUTC || "",
+      ).slice(0, 10),
       updated: String(item.dateModified || "").slice(0, 10),
-      activityDate: String(payload?.sourceNoteDateModified || item.dateModified || "").slice(
-        0,
-        10,
-      ),
+      activityDate: String(
+        payload?.sourceNoteDateModified || item.dateModified || "",
+      ).slice(0, 10),
       hasPDF: hasPdfAttachment(item),
       ai:
         payload?.ai ||
-        (Object.fromEntries(AI_FIELDS.map((k) => [k, ""])) as Record<MatrixAIKey, string>),
+        (Object.fromEntries(AI_FIELDS.map((k) => [k, ""])) as Record<
+          MatrixAIKey,
+          string
+        >),
     });
   }
   return rows;
@@ -1676,8 +1739,12 @@ function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
 }
 
 function bindHeatmapTooltip(doc: Document) {
-  const panel = doc.getElementById("lms-heatmap-panel") as HTMLDivElement | null;
-  const tooltip = doc.getElementById("lms-heatmap-tooltip") as HTMLDivElement | null;
+  const panel = doc.getElementById(
+    "lms-heatmap-panel",
+  ) as HTMLDivElement | null;
+  const tooltip = doc.getElementById(
+    "lms-heatmap-tooltip",
+  ) as HTMLDivElement | null;
   const cells = doc.querySelectorAll<HTMLDivElement>(".lms-heat-cell");
   if (!panel || !tooltip || !cells.length) {
     return;
@@ -1688,14 +1755,19 @@ function bindHeatmapTooltip(doc: Document) {
     const gap = 3;
     const labelsWidth = 42;
     const horizontalPadding = 24;
-    const usable = Math.max(400, panel.clientWidth - labelsWidth - horizontalPadding);
+    const usable = Math.max(
+      400,
+      panel.clientWidth - labelsWidth - horizontalPadding,
+    );
     const size = Math.floor((usable - (weeks - 1) * gap) / weeks);
     const clamped = Math.max(12, Math.min(20, size));
     panel.style.setProperty("--lms-cell-size", `${clamped}px`);
     panel.style.setProperty("--lms-cell-gap", `${gap}px`);
   };
   applyResponsiveCellSize();
-  const win = doc.defaultView as (Window & { __lmsHeatmapResizeHandler?: () => void }) | null;
+  const win = doc.defaultView as
+    | (Window & { __lmsHeatmapResizeHandler?: () => void })
+    | null;
   if (win) {
     if (win.__lmsHeatmapResizeHandler) {
       win.removeEventListener("resize", win.__lmsHeatmapResizeHandler);
@@ -1756,7 +1828,11 @@ function exportMatrixCSV(rows: MatrixPageRow[]) {
         .join(","),
     ),
   ].join("\n");
-  downloadTextFile(lines, `matrix-${dateStamp()}.csv`, "text/csv;charset=utf-8;");
+  downloadTextFile(
+    lines,
+    `matrix-${dateStamp()}.csv`,
+    "text/csv;charset=utf-8;",
+  );
 }
 
 function exportMatrixMarkdown(rows: MatrixPageRow[]) {
@@ -1777,22 +1853,28 @@ function exportMatrixMarkdown(rows: MatrixPageRow[]) {
     "",
     `| ${headers.join(" | ")} |`,
     `| ${headers.map(() => "---").join(" | ")} |`,
-    ...rows.map((row) =>
-      [
-        normalizeVisibleText(row.title) || `[item:${row.itemID}]`,
-        row.author,
-        row.journal,
-        row.year,
-        statusCN(row.status),
-        row.tags,
-        row.updated,
-        ...AI_FIELDS.map((field) => row.ai[field] || ""),
-      ]
-        .map((v) => String(v).replace(/\|/g, "\\|").replace(/\n/g, " "))
-        .join(" | "),
-    ).map((line) => `| ${line} |`),
+    ...rows
+      .map((row) =>
+        [
+          normalizeVisibleText(row.title) || `[item:${row.itemID}]`,
+          row.author,
+          row.journal,
+          row.year,
+          statusCN(row.status),
+          row.tags,
+          row.updated,
+          ...AI_FIELDS.map((field) => row.ai[field] || ""),
+        ]
+          .map((v) => String(v).replace(/\|/g, "\\|").replace(/\n/g, " "))
+          .join(" | "),
+      )
+      .map((line) => `| ${line} |`),
   ].join("\n");
-  downloadTextFile(md, `matrix-${dateStamp()}.md`, "text/markdown;charset=utf-8;");
+  downloadTextFile(
+    md,
+    `matrix-${dateStamp()}.md`,
+    "text/markdown;charset=utf-8;",
+  );
 }
 
 function downloadTextFile(content: string, filename: string, mimeType: string) {
@@ -1824,7 +1906,9 @@ function getPreferredItemTitle(item: Zotero.Item): string {
   if (display) {
     return display;
   }
-  const shortTitle = normalizeVisibleText(item.getField("shortTitle", false, true));
+  const shortTitle = normalizeVisibleText(
+    item.getField("shortTitle", false, true),
+  );
   if (shortTitle) {
     return shortTitle;
   }
@@ -1884,7 +1968,9 @@ function getFirstAttachmentTitle(item: Zotero.Item): string {
   if (!firstAttachment) {
     return "";
   }
-  const attTitle = normalizeVisibleText(firstAttachment.getField("title", false, true));
+  const attTitle = normalizeVisibleText(
+    firstAttachment.getField("title", false, true),
+  );
   if (attTitle) {
     return attTitle;
   }
@@ -1893,8 +1979,13 @@ function getFirstAttachmentTitle(item: Zotero.Item): string {
 }
 
 function normalizeVisibleText(value: unknown): string {
-  return String(value || "")
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+  const input = String(value || "");
+  let cleaned = "";
+  for (let i = 0; i < input.length; i++) {
+    const code = input.charCodeAt(i);
+    cleaned += code <= 0x1f || (code >= 0x7f && code <= 0x9f) ? " " : input[i];
+  }
+  return cleaned
     .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(/\s+/g, " ")
     .trim();

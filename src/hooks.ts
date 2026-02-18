@@ -65,7 +65,6 @@ async function onMainWindowLoad(win: _ZoteroTypes.MainWindow): Promise<void> {
     text: `[100%] ${getString("startup-finish")}`,
   });
   popupWin.startCloseTimer(5000);
-
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
