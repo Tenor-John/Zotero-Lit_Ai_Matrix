@@ -101,7 +101,7 @@ const registeredColumnKeys: string[] = [];
 let notifierID = "";
 let isRebuilding = false;
 const CHUNK_SIZE = 200;
-const MATRIX_UI_VERSION = "2026-02-25-2035";
+const MATRIX_UI_VERSION = "2026-02-25-2100";
 const MATRIX_NAV_BUTTON_ID = "zotero-toolbarbutton-lms-matrix";
 const MATRIX_PAGE_ROOT_ID = "lms-matrix-page-root";
 const matrixTabIDs = new WeakMap<Window, string>();
@@ -948,6 +948,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
         journal: string;
         updatedRange: string;
         tags: string;
+        activeDay: string;
         sortKey: string;
         sortDir: "asc" | "desc";
       }
@@ -958,6 +959,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     journal: "all",
     updatedRange: "all",
     tags: "",
+    activeDay: "",
     sortKey: "added",
     sortDir: "desc",
   };
@@ -1116,7 +1118,7 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     if (!tableWrap) {
       return;
     }
-    const filtered = filterMatrixRows(
+    const baseFiltered = filterMatrixRows(
       rows,
       state.q,
       state.status,
@@ -1125,22 +1127,32 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       state.updatedRange,
       state.tags,
     );
-    const sorted = sortMatrixRows(filtered, state.sortKey, state.sortDir);
+    if (
+      state.activeDay &&
+      !baseFiltered.some((r) => r.activityDate === state.activeDay)
+    ) {
+      state.activeDay = "";
+    }
+    const activeFiltered = state.activeDay
+      ? baseFiltered.filter((r) => r.activityDate === state.activeDay)
+      : baseFiltered;
+    const sorted = sortMatrixRows(activeFiltered, state.sortKey, state.sortDir);
     if (statsWrap) {
-      statsWrap.innerHTML = renderMatrixStatsHTML(sorted);
+      statsWrap.innerHTML = renderMatrixStatsHTML(baseFiltered, state.activeDay);
     }
     bindHeatmapTooltip(doc);
+    bindHeatmapDayToggle(doc, state, renderTable);
     tableWrap.innerHTML = renderMatrixTableHTML(
       sorted,
       state.sortKey,
       state.sortDir,
     );
 
-    const sortCells =
-      tableWrap.querySelectorAll<HTMLElement>("[data-sort-key]");
-    sortCells.forEach((cell: HTMLElement) => {
-      cell.onclick = () => {
-        const key = String(cell.dataset.sortKey || "");
+    const sortBtns =
+      tableWrap.querySelectorAll<HTMLButtonElement>("[data-sort-key]");
+    sortBtns.forEach((btn: HTMLButtonElement) => {
+      btn.onclick = () => {
+        const key = String(btn.dataset.sortKey || "");
         if (!key) {
           return;
         }
@@ -1188,10 +1200,10 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       "lms-matrix-export-md",
     ) as HTMLButtonElement | null;
     if (exportCsvBtn) {
-      exportCsvBtn.onclick = () => exportMatrixCSV(filtered);
+      exportCsvBtn.onclick = () => exportMatrixCSV(sorted);
     }
     if (exportMdBtn) {
-      exportMdBtn.onclick = () => exportMatrixMarkdown(filtered);
+      exportMdBtn.onclick = () => exportMatrixMarkdown(sorted);
     }
 
     const sortSelect = doc.getElementById(
@@ -1490,9 +1502,10 @@ function renderMatrixTableHTML(
             .map(({ key, label }) => {
               const active = key === sortKey;
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-              const visibleLabel = String(label || key || "").trim() || key;
-              return `<th data-sort-key="${escapeHTML(key)}" style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;">
-                ${escapeHTML(visibleLabel)}${arrow}
+              return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
+                <button data-sort-key="${escapeHTML(key)}" style="all:unset;cursor:pointer;display:inline;">
+                  ${escapeHTML(label)}${arrow}
+                </button>
               </th>`;
             })
             .join("")}
@@ -1521,7 +1534,7 @@ function renderExpandableText(input: string, limit: number) {
   `;
 }
 
-function renderMatrixStatsHTML(rows: MatrixPageRow[]) {
+function renderMatrixStatsHTML(rows: MatrixPageRow[], activeDay = "") {
   const done = rows.filter((r) => r.status === "done").length;
   const reading = rows.filter((r) => r.status === "reading").length;
   const unread = rows.filter((r) => r.status === "unread").length;
@@ -1577,13 +1590,13 @@ function renderMatrixStatsHTML(rows: MatrixPageRow[]) {
       </div>
     </div>
     <div style="margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;background:#fff;">
-      <div style="font-size:12px;color:#64748b;margin-bottom:6px;">每日使用频率（最近365天）</div>
-      ${renderUsageHeatmapHTML(rows)}
+      <div style="font-size:12px;color:#64748b;margin-bottom:6px;">${activeDay ? `已按 ${activeDay} 过滤（再次点击同一天取消）` : "每日使用频率（最近365天）"}</div>
+      ${renderUsageHeatmapHTML(rows, activeDay)}
     </div>
   `;
 }
 
-function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
+function renderUsageHeatmapHTML(rows: MatrixPageRow[], activeDay = "") {
   const counts = new Map<string, number>();
   for (const row of rows) {
     const d = row.activityDate;
@@ -1670,7 +1683,9 @@ function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
     }
     weeks.push(week);
 
-    const monthEntry = week.find((c) => c.date.getDate() === 1);
+    const monthEntry = week.find(
+      (c) => c.date.getDate() === 1 && c.date >= baseStart && c.date <= baseEnd,
+    );
     if (monthEntry) {
       monthLabels.push({
         index: col,
@@ -1685,8 +1700,15 @@ function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
     for (const cell of week) {
       const color = colorFor(cell.count, cell.inRange);
       const borderColor = cell.inRange ? "#30363d" : "#21262d";
+      const clickable = cell.inRange && cell.count > 0;
+      const selected = Boolean(activeDay) && cell.iso === activeDay;
+      const dayAttr = clickable ? ` data-day="${cell.iso}"` : "";
+      const cursor = clickable ? "cursor:pointer;" : "";
+      const selectedRing = selected
+        ? "box-shadow:0 0 0 2px #f8fafc,0 0 0 4px #22c55e;"
+        : "";
       cells.push(
-        `<div class="lms-heat-cell" data-tip="${cell.iso} · ${cell.count} 次" style="border-radius:3px;background:${color};border:1px solid ${borderColor};"></div>`,
+        `<div class="lms-heat-cell"${dayAttr} data-tip="${cell.iso} · ${cell.count} 次" style="border-radius:3px;background:${color};border:1px solid ${borderColor};${cursor}${selectedRing}"></div>`,
       );
     }
   }
@@ -1796,6 +1818,26 @@ function bindHeatmapTooltip(doc: Document) {
     cell.onmousemove = (ev: Event) => showTip(ev as MouseEvent, tip);
     cell.onmouseleave = () => {
       tooltip.style.display = "none";
+    };
+  });
+}
+
+function bindHeatmapDayToggle(
+  doc: Document,
+  state: { activeDay: string },
+  rerender: () => void,
+) {
+  const dayCells = doc.querySelectorAll<HTMLDivElement>(".lms-heat-cell[data-day]");
+  dayCells.forEach((cell: HTMLDivElement) => {
+    cell.onclick = (ev: Event) => {
+      ev.preventDefault?.();
+      ev.stopPropagation?.();
+      const day = String(cell.dataset.day || "");
+      if (!day) {
+        return;
+      }
+      state.activeDay = state.activeDay === day ? "" : day;
+      rerender();
     };
   });
 }
