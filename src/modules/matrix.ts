@@ -101,7 +101,7 @@ const registeredColumnKeys: string[] = [];
 let notifierID = "";
 let isRebuilding = false;
 const CHUNK_SIZE = 200;
-const MATRIX_UI_VERSION = "2026-02-18-2038";
+const MATRIX_UI_VERSION = "2026-02-25-2015";
 const MATRIX_NAV_BUTTON_ID = "zotero-toolbarbutton-lms-matrix";
 const MATRIX_PAGE_ROOT_ID = "lms-matrix-page-root";
 const matrixTabIDs = new WeakMap<Window, string>();
@@ -1670,7 +1670,9 @@ function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
     }
     weeks.push(week);
 
-    const monthEntry = week.find((c) => c.date.getDate() === 1);
+    const monthEntry = week.find(
+      (c) => c.date.getDate() === 1 && c.date >= baseStart && c.date <= baseEnd,
+    );
     if (monthEntry) {
       monthLabels.push({
         index: col,
