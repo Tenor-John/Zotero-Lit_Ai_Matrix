@@ -1138,7 +1138,10 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       : baseFiltered;
     const sorted = sortMatrixRows(activeFiltered, state.sortKey, state.sortDir);
     if (statsWrap) {
-      statsWrap.innerHTML = renderMatrixStatsHTML(baseFiltered, state.activeDay);
+      statsWrap.innerHTML = renderMatrixStatsHTML(
+        baseFiltered,
+        state.activeDay,
+      );
     }
     bindHeatmapTooltip(doc);
     bindHeatmapDayToggle(doc, state, renderTable);
@@ -1827,7 +1830,9 @@ function bindHeatmapDayToggle(
   state: { activeDay: string },
   rerender: () => void,
 ) {
-  const dayCells = doc.querySelectorAll<HTMLDivElement>(".lms-heat-cell[data-day]");
+  const dayCells = doc.querySelectorAll<HTMLDivElement>(
+    ".lms-heat-cell[data-day]",
+  );
   dayCells.forEach((cell: HTMLDivElement) => {
     cell.onclick = (ev: Event) => {
       ev.preventDefault?.();
