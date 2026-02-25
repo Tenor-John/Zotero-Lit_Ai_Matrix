@@ -1,55 +1,65 @@
 ﻿# Zotero Lit AI Matrix
 
-面向科研阅读的 Zotero 智能文献矩阵插件。  
-它把文献元数据（标题、作者、期刊、年份、标签）与 AI 结构化笔记自动整合成可筛选、可排序、可导出的矩阵视图。
+<div align="center">
 
-## 核心特色
+[English](README.md) | [简体中文](doc/README-zhCN.md)
 
-- 智能文献矩阵视图
-  - 在 Zotero 内嵌页面中展示文献矩阵，不需要额外软件。
-  - 支持多列展示：基础元数据 + AI 字段。
-- AI 笔记自动解析
-  - 从文献 note 中提取结构化字段，自动写入矩阵缓存。
-  - 适配你常用的 Zotero GPT / AI 生成笔记流程。
-- 热图分析
-  - GitHub 风格年度热图，显示每日使用频率。
-  - 点击某一天即可过滤矩阵为“当天文献”，再次点击取消过滤。
-- 一键跳转阅读
-  - 矩阵标题可直接跳转到 PDF 阅读器。
-- 实用工具
-  - 全库重建缓存、批量更新阅读状态、CSV/Markdown 导出。
+</div>
 
-## 安装方式
+An in-Zotero intelligent literature matrix plugin for research workflows.
 
-### 方式 1：正式版（推荐）
+It combines Zotero metadata (title, author, journal, year, tags) with structured AI notes into one searchable, sortable, and exportable matrix.
 
-1. 打开 GitHub Releases 页面，下载最新 `.xpi`。
-2. Zotero -> `工具` -> `插件` -> 右上角齿轮 -> `Install Plugin From File...`。
-3. 选择 `.xpi` 安装并重启 Zotero。
+## Highlights
 
-仓库地址：<https://github.com/Tenor-John/Zotero-Lit_Ai_Matrix>
+- Smart Matrix View
+  - Built directly inside Zotero.
+  - Shows metadata columns plus AI-structured fields.
+- AI Note Parsing
+  - Parses structured fields from notes and updates matrix cache automatically.
+  - Works well with Zotero GPT style note generation.
+- GitHub-style Usage Heatmap
+  - Visualizes daily usage frequency.
+  - Click one day to filter table by that day; click again to reset.
+- One-click Reading Jump
+  - Click title to open PDF reader directly.
+- Productivity Utilities
+  - Full-library cache rebuild, batch read-status update, CSV/Markdown export.
 
-### 方式 2：开发模式
+## Installation
+
+### Option 1: Release build (Recommended)
+
+1. Go to GitHub Releases and download the latest `.xpi`.
+2. In Zotero: `Tools` -> `Plugins` -> gear icon -> `Install Plugin From File...`.
+3. Select the `.xpi` and restart Zotero.
+
+Repository: <https://github.com/Tenor-John/Zotero-Lit_Ai_Matrix>
+
+### Option 2: Development mode
 
 ```bash
 npm install
 npm start
 ```
 
-> 需要在 `.env` 中正确配置 `ZOTERO_PLUGIN_ZOTERO_BIN_PATH` 和 `ZOTERO_PLUGIN_PROFILE_PATH`。
+Configure `.env` correctly:
 
-## 使用教程
+- `ZOTERO_PLUGIN_ZOTERO_BIN_PATH`
+- `ZOTERO_PLUGIN_PROFILE_PATH`
 
-### 1. 打开矩阵页面
+## Quick Start
 
-你可以通过以下任一入口打开：
+### 1. Open the Matrix page
 
-- 工具栏 AI Matrix 图标
-- 文件菜单中的矩阵页面入口
+Use any entry:
 
-### 2. 生成可解析的 AI Note
+- Toolbar AI Matrix icon
+- File menu matrix entry
 
-建议每篇文献至少包含以下结构化字段（可由 Zotero GPT 生成）：
+### 2. Prepare structured AI notes
+
+Recommended note keys:
 
 - `领域基础知识::`
 - `研究背景::`
@@ -59,76 +69,69 @@ npm start
 - `未来研究方向提及::`
 - `未来研究方向思考::`
 
-每个字段单独成行，使用 `::` 分隔。
+Use one key per line with `::` separator.
 
-### 3. 更新矩阵缓存
+### 3. Rebuild matrix cache
 
-- 单篇或多篇：在文献条目右键菜单执行“重建智能文献矩阵缓存”
-- 全库：在文件菜单执行“重建全库智能文献矩阵缓存”
+- Selected items: item right-click menu -> rebuild matrix cache
+- Whole library: file menu -> rebuild full-library matrix cache
 
-### 4. 在矩阵中检索与分析
+### 4. Filter and analyze
 
-- 顶部支持按关键词、阅读状态、年份、期刊、标签筛选。
-- 支持列头排序。
-- 点击文献标题直接打开 PDF（无 PDF 时定位条目）。
+- Filter by keyword, status, year, journal, tags
+- Sort by headers
+- Click title to open PDF (or locate item if no PDF)
 
-### 5. 使用热图定位当天笔记
+### 5. Heatmap day filtering
 
-- 点击热图某个有数据的小方块：矩阵仅显示该天文献。
-- 再点同一方块：恢复全部数据。
+- Click a day cell with data: table filters to that day
+- Click the same cell again: reset to full results
 
-## 与 Zotero GPT 协同建议
+## Recommended Workflow with Zotero GPT
 
-推荐流程：
+1. Generate structured notes for selected papers.
+2. Keep field names consistent with matrix keys.
+3. Rebuild cache.
+4. Compare, filter, and export in matrix view.
 
-1. 选中文献 -> 用 Zotero GPT 生成结构化总结 Note。
-2. 确保字段名与上面 7 个字段一致。
-3. 执行“重建缓存”。
-4. 在矩阵中完成筛选、对比、导出。
+## FAQ
 
-## 常见问题
+### Why are column headers missing?
 
-### Q1：矩阵列标题不显示
+- Make sure you installed the latest release.
+- Check matrix top-right `UI:xxxx` version.
+- If version is old, reinstall latest `.xpi` and restart Zotero.
 
-- 先确认已安装最新版本。
-- 打开矩阵页面，查看右上角 `UI:xxxx` 版本号是否为最新。
-- 若不是，说明仍在使用旧包，请重新安装最新 `.xpi` 并重启 Zotero。
+### Why does `npm start` report "Zotero binary not found"?
 
-### Q2：热图月份或悬浮提示异常
+Check `.env` paths:
 
-- 升级到最新版本后会修复。
-- 若仍异常，执行一次“重建全库缓存”并刷新矩阵页面。
+- `ZOTERO_PLUGIN_ZOTERO_BIN_PATH` must point to Zotero executable
+- `ZOTERO_PLUGIN_PROFILE_PATH` must point to Zotero profile directory
 
-### Q3：`npm start` 报 Zotero binary not found
+## Privacy
 
-请检查 `.env`：
+- The plugin mainly uses local Zotero item/note data.
+- It does not proactively upload your library data.
+- Any external AI traffic depends on your GPT plugin setup.
 
-- `ZOTERO_PLUGIN_ZOTERO_BIN_PATH` 指向 Zotero 可执行文件
-- `ZOTERO_PLUGIN_PROFILE_PATH` 指向 Zotero profile 目录
-
-## 数据与隐私
-
-- 插件主要使用 Zotero 本地条目与 note 数据。
-- 不会主动上传你的文献库内容。
-- 是否调用第三方 AI 服务取决于你使用的 GPT 插件配置。
-
-## 开发与发布
+## Build and Release
 
 ```bash
 npm run build
 npm run release
 ```
 
-建议发布流程：
+Recommended release process:
 
-1. 在功能分支完成开发与测试。
-2. 提交 PR 合并到 `main`。
-3. 使用语义化版本发布（如 `v0.1.5`）。
+1. Develop and test in feature branch
+2. Merge via PR into `main`
+3. Release with semantic version tags (e.g. `v0.1.5`)
 
-## 许可证
+## License
 
 AGPL-3.0-or-later
 
-## 作者
+## Author
 
 Tenor-John
