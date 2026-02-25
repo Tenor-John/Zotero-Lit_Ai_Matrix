@@ -1490,9 +1490,10 @@ function renderMatrixTableHTML(
             .map(({ key, label }) => {
               const active = key === sortKey;
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+              const visibleLabel = String(label || key || "").trim() || key;
               return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
-                <button data-sort-key="${escapeHTML(key)}" style="all:unset;cursor:pointer;display:inline;">
-                  ${escapeHTML(label)}${arrow}
+                <button data-sort-key="${escapeHTML(key)}" style="cursor:pointer;display:inline-block;border:none;background:transparent;color:#fff;font:inherit;line-height:1.2;padding:0;">
+                  ${escapeHTML(visibleLabel)}${arrow}
                 </button>
               </th>`;
             })
