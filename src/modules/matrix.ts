@@ -101,7 +101,7 @@ const registeredColumnKeys: string[] = [];
 let notifierID = "";
 let isRebuilding = false;
 const CHUNK_SIZE = 200;
-const MATRIX_UI_VERSION = "2026-02-25-2015";
+const MATRIX_UI_VERSION = "2026-02-25-2035";
 const MATRIX_NAV_BUTTON_ID = "zotero-toolbarbutton-lms-matrix";
 const MATRIX_PAGE_ROOT_ID = "lms-matrix-page-root";
 const matrixTabIDs = new WeakMap<Window, string>();
@@ -1492,7 +1492,7 @@ function renderMatrixTableHTML(
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
               const visibleLabel = String(label || key || "").trim() || key;
               return `<th data-sort-key="${escapeHTML(key)}" style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;">
-                  ${escapeHTML(visibleLabel)}${arrow}
+                ${escapeHTML(visibleLabel)}${arrow}
               </th>`;
             })
             .join("")}
@@ -1670,9 +1670,7 @@ function renderUsageHeatmapHTML(rows: MatrixPageRow[]) {
     }
     weeks.push(week);
 
-    const monthEntry = week.find(
-      (c) => c.date.getDate() === 1 && c.date >= baseStart && c.date <= baseEnd,
-    );
+    const monthEntry = week.find((c) => c.date.getDate() === 1);
     if (monthEntry) {
       monthLabels.push({
         index: col,
