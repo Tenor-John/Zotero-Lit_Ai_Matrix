@@ -1136,11 +1136,11 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       state.sortDir,
     );
 
-    const sortBtns =
-      tableWrap.querySelectorAll<HTMLButtonElement>("[data-sort-key]");
-    sortBtns.forEach((btn: HTMLButtonElement) => {
-      btn.onclick = () => {
-        const key = String(btn.dataset.sortKey || "");
+    const sortCells =
+      tableWrap.querySelectorAll<HTMLElement>("[data-sort-key]");
+    sortCells.forEach((cell: HTMLElement) => {
+      cell.onclick = () => {
+        const key = String(cell.dataset.sortKey || "");
         if (!key) {
           return;
         }
@@ -1491,10 +1491,8 @@ function renderMatrixTableHTML(
               const active = key === sortKey;
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
               const visibleLabel = String(label || key || "").trim() || key;
-              return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
-                <button data-sort-key="${escapeHTML(key)}" style="cursor:pointer;display:inline-block;border:none;background:transparent;color:#fff;font:inherit;line-height:1.2;padding:0;">
+              return `<th data-sort-key="${escapeHTML(key)}" style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;">
                   ${escapeHTML(visibleLabel)}${arrow}
-                </button>
               </th>`;
             })
             .join("")}
