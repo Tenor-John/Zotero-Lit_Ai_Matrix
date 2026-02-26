@@ -978,73 +978,6 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
           <button id="lms-matrix-refresh" style="padding:6px 10px;border:1px solid #94a3b8;background:#fff;border-radius:6px;cursor:pointer;">刷新</button>
         </div>
       </div>
-      <div id="lms-matrix-filters-wrap" style="padding:10px 12px;background:#fff;border-bottom:1px solid #eee;">
-        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc;">
-          <div style="display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:12px;align-items:end;">
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">阅读状态</div>
-              <select id="lms-matrix-status" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部状态</option>
-                <option value="done">已读</option>
-                <option value="reading">在读</option>
-                <option value="unread">未读</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">年份</div>
-              <select id="lms-matrix-year" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部年份</option>
-                ${years
-                  .map(
-                    (y) =>
-                      `<option value="${escapeHTML(y)}">${escapeHTML(y)}</option>`,
-                  )
-                  .join("")}
-              </select>
-            </div>
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">分类</div>
-              <select id="lms-matrix-journal" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">全部分类</option>
-                <option value="__empty__">未分类</option>
-                ${journals
-                  .filter((j) => j)
-                  .map(
-                    (j) =>
-                      `<option value="${escapeHTML(j)}">${escapeHTML(j)}</option>`,
-                  )
-                  .join("")}
-              </select>
-            </div>
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">修改时间</div>
-              <select id="lms-matrix-updated-range" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="all">不限</option>
-                <option value="7d">近7天</option>
-                <option value="30d">近30天</option>
-                <option value="365d">近365天</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:end;margin-top:12px;">
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">标签</div>
-              <input id="lms-matrix-tags" type="text" placeholder="全部标签" value="${escapeHTML(state.tags)}" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;"/>
-            </div>
-            <div>
-              <div style="font-size:12px;color:#475569;margin-bottom:6px;">排序方式</div>
-              <select id="lms-matrix-sort" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;">
-                <option value="added:desc">最新导入</option>
-                <option value="updated:desc">最新修改</option>
-                <option value="year:desc">年份（新→旧）</option>
-                <option value="year:asc">年份（旧→新）</option>
-                <option value="title:asc">标题（A→Z）</option>
-                <option value="title:desc">标题（Z→A）</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
       <div id="lms-matrix-stats-wrap" style="padding:8px 12px;background:#fff;border-bottom:1px solid #eee;"></div>
       <div id="lms-matrix-table-wrap" style="flex:1 1 auto;overflow:auto;padding:8px 12px 12px 12px;background:#fff;"></div>
     </div>
@@ -1151,11 +1084,11 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       state.sortDir,
     );
 
-    const sortBtns =
-      tableWrap.querySelectorAll<HTMLButtonElement>("[data-sort-key]");
-    sortBtns.forEach((btn: HTMLButtonElement) => {
-      btn.onclick = () => {
-        const key = String(btn.dataset.sortKey || "");
+    const sortTargets =
+      tableWrap.querySelectorAll<HTMLElement>("[data-sort-key]");
+    sortTargets.forEach((target: HTMLElement) => {
+      target.onclick = () => {
+        const key = String(target.dataset.sortKey || "");
         if (!key) {
           return;
         }
@@ -1166,6 +1099,13 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
           state.sortDir = "asc";
         }
         renderTable();
+      };
+      target.onkeydown = (ev: Event) => {
+        const key = (ev as KeyboardEvent).key;
+        if (key === "Enter" || key === " ") {
+          ev.preventDefault?.();
+          target.click();
+        }
       };
     });
     const openPdfTargets: NodeListOf<HTMLElement> =
@@ -1463,6 +1403,22 @@ function renderMatrixTableHTML(
     { key: "updated", label: "更新日期" },
     ...AI_FIELDS.map((f) => ({ key: `ai__${toSafeKey(f)}`, label: f })),
   ];
+  const headerLabelMap: Record<string, string> = {
+    title: "标题",
+    author: "作者",
+    journal: "期刊",
+    year: "年份",
+    status: "状态",
+    tags: "标签",
+    updated: "更新日期",
+  };
+  headerLabelMap[`ai__${toSafeKey("领域基础知识")}`] = "领域基础知识";
+  headerLabelMap[`ai__${toSafeKey("研究背景")}`] = "研究背景";
+  headerLabelMap[`ai__${toSafeKey("作者的问题意识")}`] = "作者的问题意识";
+  headerLabelMap[`ai__${toSafeKey("研究意义")}`] = "研究意义";
+  headerLabelMap[`ai__${toSafeKey("研究结论")}`] = "研究结论";
+  headerLabelMap[`ai__${toSafeKey("未来研究方向提及")}`] = "未来研究方向提及";
+  headerLabelMap[`ai__${toSafeKey("未来研究方向思考")}`] = "未来研究方向思考";
   const statusCN = (s: string) =>
     s === "done" ? "已读" : s === "reading" ? "在读" : "未读";
   const body = rows
@@ -1503,12 +1459,11 @@ function renderMatrixTableHTML(
         <tr>
           ${headers
             .map(({ key, label }) => {
+              const displayLabel = headerLabelMap[key] || label;
               const active = key === sortKey;
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-              return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
-                <button data-sort-key="${escapeHTML(key)}" style="all:unset;cursor:pointer;display:inline;">
-                  ${escapeHTML(label)}${arrow}
-                </button>
+              return `<th data-sort-key="${escapeHTML(key)}" role="button" tabindex="0" style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;font-weight:600;">
+                  <span style="color:#ffffff;">${escapeHTML(displayLabel)}${arrow}</span>
               </th>`;
             })
             .join("")}
