@@ -1151,11 +1151,11 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       state.sortDir,
     );
 
-    const sortBtns =
-      tableWrap.querySelectorAll<HTMLButtonElement>("[data-sort-key]");
-    sortBtns.forEach((btn: HTMLButtonElement) => {
-      btn.onclick = () => {
-        const key = String(btn.dataset.sortKey || "");
+    const sortTargets =
+      tableWrap.querySelectorAll<HTMLElement>("[data-sort-key]");
+    sortTargets.forEach((target: HTMLElement) => {
+      target.onclick = () => {
+        const key = String(target.dataset.sortKey || "");
         if (!key) {
           return;
         }
@@ -1166,6 +1166,13 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
           state.sortDir = "asc";
         }
         renderTable();
+      };
+      target.onkeydown = (ev: Event) => {
+        const key = (ev as KeyboardEvent).key;
+        if (key === "Enter" || key === " ") {
+          ev.preventDefault?.();
+          target.click();
+        }
       };
     });
     const openPdfTargets: NodeListOf<HTMLElement> =
@@ -1463,6 +1470,22 @@ function renderMatrixTableHTML(
     { key: "updated", label: "更新日期" },
     ...AI_FIELDS.map((f) => ({ key: `ai__${toSafeKey(f)}`, label: f })),
   ];
+  const headerLabelMap: Record<string, string> = {
+    title: "标题",
+    author: "作者",
+    journal: "期刊",
+    year: "年份",
+    status: "状态",
+    tags: "标签",
+    updated: "更新日期",
+  };
+  headerLabelMap[`ai__${toSafeKey("领域基础知识")}`] = "领域基础知识";
+  headerLabelMap[`ai__${toSafeKey("研究背景")}`] = "研究背景";
+  headerLabelMap[`ai__${toSafeKey("作者的问题意识")}`] = "作者的问题意识";
+  headerLabelMap[`ai__${toSafeKey("研究意义")}`] = "研究意义";
+  headerLabelMap[`ai__${toSafeKey("研究结论")}`] = "研究结论";
+  headerLabelMap[`ai__${toSafeKey("未来研究方向提及")}`] = "未来研究方向提及";
+  headerLabelMap[`ai__${toSafeKey("未来研究方向思考")}`] = "未来研究方向思考";
   const statusCN = (s: string) =>
     s === "done" ? "已读" : s === "reading" ? "在读" : "未读";
   const body = rows
@@ -1503,12 +1526,11 @@ function renderMatrixTableHTML(
         <tr>
           ${headers
             .map(({ key, label }) => {
+              const displayLabel = headerLabelMap[key] || label;
               const active = key === sortKey;
               const arrow = active ? (sortDir === "asc" ? " ▲" : " ▼") : "";
-              return `<th style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">
-                <button data-sort-key="${escapeHTML(key)}" style="all:unset;cursor:pointer;display:inline;">
-                  ${escapeHTML(label)}${arrow}
-                </button>
+              return `<th data-sort-key="${escapeHTML(key)}" role="button" tabindex="0" style="position:sticky;top:0;background:#0f172a;color:#fff;border:1px solid #1e293b;padding:6px 8px;text-align:left;z-index:2;white-space:normal;word-break:break-word;overflow-wrap:anywhere;cursor:pointer;font-weight:600;">
+                  <span style="color:#ffffff;">${escapeHTML(displayLabel)}${arrow}</span>
               </th>`;
             })
             .join("")}
