@@ -1543,18 +1543,22 @@ function renderMatrixTableHTML(
 
 function renderExpandableText(input: string, limit: number) {
   const content = String(input || "").trim();
-  const safeContent = escapeHTML(content);
   if (!content) {
     return "";
   }
   if (content.length <= limit) {
-    return safeContent;
+    return escapeHTML(content);
   }
-  const short = `${escapeHTML(content.slice(0, limit))}...`;
+  const head = escapeHTML(content.slice(0, limit));
+  const tailRaw = content.slice(limit).trimStart();
+  const tail = escapeHTML(tailRaw);
+  if (!tailRaw) {
+    return escapeHTML(content);
+  }
   return `
     <details style="cursor:pointer;">
-      <summary style="list-style-position:inside;color:#0f766e;">${short}</summary>
-      <div style="margin-top:4px;color:#334155;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${safeContent}</div>
+      <summary style="list-style-position:inside;color:#0f766e;">${head}...（展开/收起全文）</summary>
+      <div style="margin-top:4px;color:#334155;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${tail}</div>
     </details>
   `;
 }
