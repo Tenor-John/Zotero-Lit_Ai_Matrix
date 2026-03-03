@@ -101,6 +101,7 @@ const registeredColumnKeys: string[] = [];
 let notifierID = "";
 let isRebuilding = false;
 const CHUNK_SIZE = 200;
+const MATRIX_MAX_RENDER_ROWS = 300;
 const MATRIX_UI_VERSION = "2026-02-25-2100";
 const MATRIX_NAV_BUTTON_ID = "zotero-toolbarbutton-lms-matrix";
 const MATRIX_PAGE_ROOT_ID = "lms-matrix-page-root";
@@ -1137,6 +1138,10 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
       ? baseFiltered.filter((r) => r.activityDate === state.activeDay)
       : baseFiltered;
     const sorted = sortMatrixRows(activeFiltered, state.sortKey, state.sortDir);
+    const renderRows =
+      sorted.length > MATRIX_MAX_RENDER_ROWS
+        ? sorted.slice(0, MATRIX_MAX_RENDER_ROWS)
+        : sorted;
     if (statsWrap) {
       statsWrap.innerHTML = renderMatrixStatsHTML(
         baseFiltered,
@@ -1145,11 +1150,15 @@ async function renderMatrixPage(win: Window, rootOverride?: HTMLDivElement) {
     }
     bindHeatmapTooltip(doc);
     bindHeatmapDayToggle(doc, state, renderTable);
-    tableWrap.innerHTML = renderMatrixTableHTML(
-      sorted,
-      state.sortKey,
-      state.sortDir,
-    );
+    const renderHint =
+      sorted.length > MATRIX_MAX_RENDER_ROWS
+        ? `<div style="margin-bottom:8px;padding:8px 10px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;border-radius:6px;font-size:12px;">
+             当前结果共 ${sorted.length} 条，为避免卡顿仅渲染前 ${MATRIX_MAX_RENDER_ROWS} 条。请先缩小筛选范围再查看全部。
+           </div>`
+        : "";
+    tableWrap.innerHTML =
+      renderHint +
+      renderMatrixTableHTML(renderRows, state.sortKey, state.sortDir);
 
     const sortTargets =
       tableWrap.querySelectorAll<HTMLElement>("[data-sort-key]");
@@ -1557,7 +1566,7 @@ function renderExpandableText(input: string, limit: number) {
   }
   return `
     <details style="cursor:pointer;">
-      <summary style="list-style-position:inside;color:#0f766e;">${head}...（展开/收起全文）</summary>
+      <summary style="list-style-position:inside;color:#0f766e;">${head}...</summary>
       <div style="margin-top:4px;color:#334155;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${tail}</div>
     </details>
   `;
