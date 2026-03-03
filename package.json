@@ -1,7 +1,7 @@
 {
   "name": "zotero-lit-ai-matrix",
   "type": "module",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Zotero Lit AI Matrix",
   "config": {
     "addonName": "Zotero Lit AI Matrix",
